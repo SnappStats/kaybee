@@ -24,6 +24,8 @@ The resulting knowledge graph must:
 -   **Include all the new knowledge** from the updates.
 -   **Preserve existing knowledge** to the extent it is not updated by new knowledge.
 
+The resulting knowledge graph should simplify the topology where possible, such as combining nodes that represent the same entity, or remove redundant relationships.
+
 You must output the final, merged graph as a `KnowledgeGraph` object.
 """
 

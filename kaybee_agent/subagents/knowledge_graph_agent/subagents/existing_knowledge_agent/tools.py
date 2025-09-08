@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import networkx as nx
 from dotenv import load_dotenv
@@ -7,6 +8,7 @@ from typing import Optional
 from google.adk.tools import ToolContext
 from google.cloud import storage
 from thefuzz import fuzz
+from floggit import flog
 
 load_dotenv()
 
@@ -55,6 +57,8 @@ def _find_entity_ids_by_name(
         if fuzz.ratio(entity_name.lower(), name.lower()) > threshold
     ]
 
+
+@flog
 def get_relevant_neighborhoods(entity_names: list[str], tool_context: ToolContext) -> dict:
     """
     Args:
@@ -81,17 +85,19 @@ def get_relevant_neighborhoods(entity_names: list[str], tool_context: ToolContex
             for nbr in mdg.to_undirected().neighbors(entity_id)
     }
 
-    subgraph = mdg.subgraph(relevant_entity_ids|nbrs1|nbrs2)
-    subgraph_json = nx.node_link_data(subgraph, edges="links")
+    neighborhoods = mdg.subgraph(relevant_entity_ids|nbrs1|nbrs2)
+    neighborhoods_json = nx.node_link_data(neighborhoods, edges="links")
 
+    # Reformat
     neighborhoods = {
-        'entities': {node['entity_id']: node for node in subgraph_json['nodes']},
+        'entities': {
+            node['entity_id']: node for node in neighborhoods_json['nodes']},
         'relationships': [
             {
                 'source_entity_id': link['source'],
                 'target_entity_id': link['target'],
                 'relationship': link['relationship']
-            } for link in subgraph_json['links']
+            } for link in neighborhoods_json['links']
         ]
     }
 

@@ -98,16 +98,21 @@ def store_graph(callback_context: CallbackContext, llm_response: LlmResponse) ->
             for k, v in full_knowledge_graph['entities'].items()
             if k not in existing_knowledge_subgraph['entities']
     }
+    existing_relationships = [
+            (rel['source_entity_id'], rel['target_entity_id'])
+            for rel in existing_knowledge_subgraph['relationships']
+    ]
     full_knowledge_graph['relationships'] = [
             rel for rel in full_knowledge_graph['relationships']
-            if (rel['source_entity_id'], rel['target_entity_id']) not in [
-                (r['source_entity_id'], r['target_entity_id'])
-                for r in existing_knowledge_subgraph['relationships']
-            ]
+            if (rel['source_entity_id'], rel['target_entity_id'])
+            not in existing_relationships
     ]
 
     # Insert updated_knowledge_graph
-    full_knowledge_graph['entities'].update(updated_knowledge_subgraph['entities'])
-    full_knowledge_graph['relationships'].extend(updated_knowledge_subgraph['relationships'])
+    full_knowledge_graph['entities'].update(
+            updated_knowledge_subgraph['entities'])
+    full_knowledge_graph['relationships'].extend(
+            updated_knowledge_subgraph['relationships'])
 
-    _store_knowledge_graph(knowledge_graph=full_knowledge_graph, graph_id=graph_id)
+    _store_knowledge_graph(
+            knowledge_graph=full_knowledge_graph, graph_id=graph_id)
