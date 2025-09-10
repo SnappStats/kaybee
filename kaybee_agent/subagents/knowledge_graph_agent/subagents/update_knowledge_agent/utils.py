@@ -17,7 +17,7 @@ def generate_random_string(length=10):
         raise ValueError("Length must be a positive integer")
 
     # Define the character set to choose from
-    characters = string.ascii_letters + string.digits
+    characters = string.ascii_lowercase + string.digits
 
     # Use secrets.choice() for cryptographic security
     random_string = ''.join(secrets.choice(characters) for _ in range(length))

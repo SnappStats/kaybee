@@ -48,10 +48,8 @@ def _reformat_graph(g: dict) -> dict:
         dict: g, but with new entity IDs, and with g['entities'] now as a dict.'''
 
     id_mapping = {
-            entity_id: generate_random_string()
-            for entity_id in [
-                entity['entity_id']
-                for entity in g['entities']]
+            entity['entity_id']: f"{entity['entity_names'][0].lower()}.{generate_random_string(length=4)}"
+            for entity in g['entities']
     }
 
     g['entities'] = {
