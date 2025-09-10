@@ -2,12 +2,13 @@ import json
 import os
 from dotenv import load_dotenv
 from typing import Optional
-import uuid
 from floggit import flog
 
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmResponse
 from google.cloud import storage
+
+from .utils import generate_random_string
 
 load_dotenv()
 
@@ -47,7 +48,7 @@ def _reformat_graph(g: dict) -> dict:
         dict: g, but with new entity IDs, and with g['entities'] now as a dict.'''
 
     id_mapping = {
-            entity_id: str(uuid.uuid4())
+            entity_id: generate_random_string()
             for entity_id in [
                 entity['entity_id']
                 for entity in g['entities']]

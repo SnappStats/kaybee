@@ -59,7 +59,7 @@ def _find_entity_ids_by_name(
 
 
 @flog
-def get_relevant_neighborhoods(entity_names: list[str], tool_context: ToolContext) -> dict:
+def get_relevant_neighborhood(entity_names: list[str], tool_context: ToolContext) -> dict:
     """
     Args:
         entity_names (list[str]): A list of entity names, and any synonyms, that might be nodes in the existing knowledge graph.
@@ -85,22 +85,22 @@ def get_relevant_neighborhoods(entity_names: list[str], tool_context: ToolContex
             for nbr in mdg.to_undirected().neighbors(entity_id)
     }
 
-    neighborhoods = mdg.subgraph(relevant_entity_ids|nbrs1|nbrs2)
-    neighborhoods_json = nx.node_link_data(neighborhoods, edges="links")
+    neighborhood = mdg.subgraph(relevant_entity_ids|nbrs1|nbrs2)
+    neighborhood_json = nx.node_link_data(neighborhood, edges="links")
 
     # Reformat
-    neighborhoods = {
+    neighborhood = {
         'entities': {
-            node['entity_id']: node for node in neighborhoods_json['nodes']},
+            node['entity_id']: node for node in neighborhood_json['nodes']},
         'relationships': [
             {
                 'source_entity_id': link['source'],
                 'target_entity_id': link['target'],
                 'relationship': link['relationship']
-            } for link in neighborhoods_json['links']
+            } for link in neighborhood_json['links']
         ]
     }
 
-    tool_context.state['existing_knowledge'] = neighborhoods
+    tool_context.state['existing_knowledge'] = neighborhood
 
-    return neighborhoods
+    return neighborhood

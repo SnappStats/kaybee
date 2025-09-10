@@ -10,23 +10,20 @@ from .tools import store_graph
 PROMPT = """
 You are a specialized agent that updates knowledge graphs.
 
-Given a knowledge graph and a list of updates, your task is to produce an updated version of the knowledge graph.
+Given a snippet of user input and a relevant (yet potentially incomplete/incorrect) subgraph of a knowledge graph, your task is to produce a replacement for the subgraph that reflects any new or updated information from the user input.
 
-Here's the knowledge graph that should be updated:
+Here's the subgraph that should be updated:
 
     {existing_knowledge}
 
-Here are updates that need to be applied to the existing knowledge:
+The replacement subgraph must:
+-   **Include all new/updated knowledge** suggested by the user input.
+-   **Preserve existing knowledge**, including relationships with _external_ entities (connected to, but not included in, the given subgraph, to the extent it is not updated by new knowledge.
+-   **(Faithfully) simplify graph topology**, such as combining nodes that represent the same entity, or removing redundant relationships.
 
-    {knowledge_updates}
+If there is no new or updated knowledge, the replacement subgraph should resemble the original subgraph. If the updated knowledge eradicates the existing knowledge, the replacement subgraph should be empty.
 
-The resulting knowledge graph must:
--   **Include all the new knowledge** from the updates.
--   **Preserve existing knowledge** to the extent it is not updated by new knowledge.
-
-The resulting knowledge graph should simplify the topology where possible, such as combining nodes that represent the same entity, or remove redundant relationships.
-
-You must output the final, merged graph as a `KnowledgeGraph` object.
+You must output the updated subgraph as a `KnowledgeGraph` object.
 """
 
 def check_for_updates(callback_context: CallbackContext) -> Optional[types.Content]:
@@ -43,15 +40,17 @@ def check_for_updates(callback_context: CallbackContext) -> Optional[types.Conte
 agent = Agent(
     name="merge_knowledge_agent",
     model="gemini-2.5-flash",
+    disallow_transfer_to_parent=True,
+    disallow_transfer_to_peers=True,
     planner=BuiltInPlanner(
         thinking_config=types.ThinkingConfig(
             include_thoughts=False,
-            thinking_budget=1024,
+            thinking_budget=512,
         )
     ),
     instruction=PROMPT,
     output_schema=KnowledgeGraph,
     output_key='updated_knowledge',
-    before_agent_callback=check_for_updates,
+    #before_agent_callback=check_for_updates,
     after_model_callback=store_graph
 )
