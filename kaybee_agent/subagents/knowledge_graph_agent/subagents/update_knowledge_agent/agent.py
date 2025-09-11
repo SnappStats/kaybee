@@ -26,17 +26,6 @@ If there is no new or updated knowledge, the replacement subgraph should resembl
 You must output the updated subgraph as a `KnowledgeGraph` object.
 """
 
-def check_for_updates(callback_context: CallbackContext) -> Optional[types.Content]:
-    if not callback_context.state['knowledge_updates']['knowledge']:
-        # Return Content to skip the agent's run
-        return types.Content(
-            parts=[types.Part(text=f"Agent {callback_context.agent_name} skipped by before_agent_callback due to state.")],
-            role="model" # Assign model role to the overriding response
-        )
-    else:
-        # Return None to allow the LlmAgent's normal execution
-        return None
-
 agent = Agent(
     name="merge_knowledge_agent",
     model="gemini-2.5-flash",
@@ -51,6 +40,5 @@ agent = Agent(
     instruction=PROMPT,
     output_schema=KnowledgeGraph,
     output_key='updated_knowledge',
-    #before_agent_callback=check_for_updates,
     after_model_callback=store_graph
 )

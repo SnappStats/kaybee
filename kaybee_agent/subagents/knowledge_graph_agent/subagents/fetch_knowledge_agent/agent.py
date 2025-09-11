@@ -2,14 +2,16 @@ from google.adk.agents import Agent
 from google.adk.planners import BuiltInPlanner
 from google.genai import types
 
-from .tools import get_relevant_neighborhood
+from .tools import get_relevant_neighborhood as fetch_knowledge_subgraph
 
 PROMPT = """
-You are a specialized agent that retrieves knowledge from a knowledge graph.
+You are a technical research agent with access to a knowledge graph. Your goal is to retrieve what is _currently_ stored in the knowledge graph, relevant to the user's input (e.g. conversation snippets, documents, etc.).
 
-Your input is a conversation snippet, and your task is to use the `get_relevant_neighborhood` tool to retrieve any portions of the knowledge graph relevant to the topics being discussed.
+**Workflow**
+1. Examine the user input to identify all key topics and entities.
+2. Use `fetch_knowledge_subgraph` tool to retrieve relevant portions of the knowledge graph. It might take a few calls to gather a complete picture, especially if the input covers multiple topics, but your final call should be comprehensive (albeit relevant to the user input).
 
-Use that tool as often as needed until you're satisfied you have fetched an adequate neighborhood.
+Note that the knowledge graph might be incomplete or incorrect; that's fine. Your goal is to retrieve what is currently recorded.
 """
 
 agent = Agent(
@@ -23,6 +25,6 @@ agent = Agent(
     ),
     instruction=PROMPT,
     tools=[
-        get_relevant_neighborhood
+        fetch_knowledge_subgraph
     ]
 )
