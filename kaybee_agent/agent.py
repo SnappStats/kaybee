@@ -11,13 +11,11 @@ from google.genai import types
 from typing import Optional
 
 from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
-from .prompt import get_prompt
+from .subagents.flowchart_agent import agent as flowchart_agent
 
 def setup_environment():
     # Load environment variables from .env file in root directory
-    root_dir = Path(__file__).parent.parent
-    dotenv_path = root_dir / ".env"
-    load_dotenv(dotenv_path=dotenv_path)
+    load_dotenv()
 
     # Use default project from credentials if not in .env
     try:
@@ -39,8 +37,9 @@ root_agent = Agent(
             thinking_budget=1024,
         )
     ),
-    instruction=get_prompt(),
+    instruction='''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.''',
     sub_agents=[
-        knowledge_graph_agent
+        knowledge_graph_agent,
+        flowchart_agent
     ],
 )
