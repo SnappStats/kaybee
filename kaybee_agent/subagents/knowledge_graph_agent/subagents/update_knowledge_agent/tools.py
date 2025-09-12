@@ -39,39 +39,39 @@ def _store_knowledge_graph(knowledge_graph: dict, graph_id: str) -> None:
     )
 
 
-def _reformat_graph(g: dict) -> dict:
+def _reformat_graph(graph: dict, frozen_entity_ids: set) -> dict:
     '''
     Args:
-        g (dict): A knowledge graph as a dict, with g['entities'] as a list.
+        graph (dict): A knowledge graph as a dict, with graph['entities'] as a list.
 
     Returns:
-        dict: g, but with new entity IDs, and with g['entities'] now as a dict.'''
+        dict: graph, but with new entity IDs, and with graph['entities'] now as a dict.'''
 
-    id_mapping = {
-            entity['entity_id']: f"{entity['entity_names'][0][:4].replace(' ','_').lower()}.{generate_random_string(length=4)}"
-            for entity in g['entities']
-    }
+    id_mapping = {}
+    for entity in graph['entities']:
+        if entity['entity_id'] in frozen_entity_ids:
+            id_mapping[entity['entity_id']] = entity['entity_id']
+        else:
+            new_id = f"{entity['entity_names'][0][:4].replace(' ','_').lower()}.{generate_random_string(length=4)}"
+            id_mapping[entity['entity_id']] = new_id
 
-    g['entities'] = {
+    graph['entities'] = {
             id_mapping[entity['entity_id']]: entity | {'entity_id': id_mapping[entity['entity_id']]}
-            for entity in g['entities']
+            for entity in graph['entities']
     }
 
-    g['relationships'] = [
+    graph['relationships'] = [
             rel | {
-                'source_entity_id': id_mapping.get(rel['source_entity_id'], rel['source_entity_id']),
-                'target_entity_id': id_mapping.get(rel['target_entity_id'], rel['target_entity_id'])
+                'source_entity_id': id_mapping[rel['source_entity_id']],
+                'target_entity_id': id_mapping[rel['target_entity_id']]
             }
-            for rel in g['relationships']
+            for rel in graph['relationships']
     ]
 
-    return g
+    return graph
 
-@flog
-def _record_graph_delta(graph_id: str, old_subgraph: dict, new_subgraph: dict):
-    return
 
-def store_graph(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
+def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
     """
     Stores the provided graph in the knowledge graph store.
     This will overwrite the existing graph.
@@ -80,38 +80,44 @@ def store_graph(callback_context: CallbackContext, llm_response: LlmResponse) ->
         return
 
     existing_knowledge_subgraph = callback_context.state['existing_knowledge']
+    frozen_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('frozen')}
     updated_knowledge_subgraph = json.loads(llm_response.content.parts[-1].text)
-    updated_knowledge_subgraph = _reformat_graph(updated_knowledge_subgraph)
+    updated_knowledge_subgraph = _reformat_graph(
+            graph=updated_knowledge_subgraph, frozen_entity_ids=frozen_entity_ids)
 
-    graph_id = callback_context._invocation_context.user_id
-    full_knowledge_graph = _fetch_knowledge_graph(graph_id)
-
-    _record_graph_delta(
-            graph_id,
+    _update_knowledge_graph(
+            graph_id=callback_context._invocation_context.user_id,
             old_subgraph=existing_knowledge_subgraph,
             new_subgraph=updated_knowledge_subgraph)
 
+@flog
+def _update_knowledge_graph(
+        graph_id: str,
+        old_subgraph: dict,
+        new_subgraph: dict):
+
+    graph = _fetch_knowledge_graph(graph_id)
+
     # Excise existing_knowledge_graph
-    full_knowledge_graph['entities'] = {
+    graph['entities'] = {
             k: v
-            for k, v in full_knowledge_graph['entities'].items()
-            if k not in existing_knowledge_subgraph['entities']
+            for k, v in graph['entities'].items()
+            if k not in old_subgraph['entities']
     }
-    existing_relationships = [
+    old_relationships = [
             (rel['source_entity_id'], rel['target_entity_id'])
-            for rel in existing_knowledge_subgraph['relationships']
+            for rel in old_subgraph['relationships']
     ]
-    full_knowledge_graph['relationships'] = [
-            rel for rel in full_knowledge_graph['relationships']
+    graph['relationships'] = [
+            rel for rel in graph['relationships']
             if (rel['source_entity_id'], rel['target_entity_id'])
-            not in existing_relationships
+            not in old_relationships
     ]
 
     # Insert updated_knowledge_graph
-    full_knowledge_graph['entities'].update(
-            updated_knowledge_subgraph['entities'])
-    full_knowledge_graph['relationships'].extend(
-            updated_knowledge_subgraph['relationships'])
+    graph['entities'].update(
+            new_subgraph['entities'])
+    graph['relationships'].extend(
+            new_subgraph['relationships'])
 
-    _store_knowledge_graph(
-            knowledge_graph=full_knowledge_graph, graph_id=graph_id)
+    _store_knowledge_graph(knowledge_graph=graph, graph_id=graph_id)
