@@ -28,6 +28,9 @@ def setup_environment():
         # The tests will set the required environment variables.
         pass
 
+
+PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.'''
+
 root_agent = Agent(
     name="knowledge_base_agent",
     model="gemini-2.5-flash",
@@ -37,7 +40,7 @@ root_agent = Agent(
             thinking_budget=1024,
         )
     ),
-    instruction='''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.''',
+    instruction=PROMPT,
     sub_agents=[
         knowledge_graph_agent,
         flowchart_agent
