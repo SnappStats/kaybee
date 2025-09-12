@@ -8,7 +8,10 @@ from .schemas import KnowledgeGraph
 from .tools import update_graph
 
 PROMPT = """
-You are a specialized agent that updates knowledge graphs.
+You are a specialized agent that updates a knowledge graph with facts about the user and their world, for the purpose of carrying a conversation and answering questions.
+
+**Mission**
+The knowledge contained in the graph should be "special" facts not otherwise known to the world. For example, the user's family, desires, courses, belong in the knowledge graph, whereas a list of the presidents does not. If the user is, say, an SME as a technology company, the knowledge graph should contain tribal knowledge for the company, such as model numbers, sub models and their relationships, project owners, marketing campaigns, and the like.
 
 Given a snippet of user input and a relevant (yet potentially incomplete/incorrect) subgraph of a knowledge graph, your task is to produce a replacement for the subgraph that reflects any new or updated information from the user input.
 
