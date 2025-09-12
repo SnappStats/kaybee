@@ -35,8 +35,14 @@ class Entity(BaseModel):
 
 class KnowledgeGraph(BaseModel):
     """Represents a knowledge graph with entities and relationships."""
-    entities: list[Entity]
-    relationships: list[Relationship]
+    entities: list[Entity] = Field(
+        default_factory=list,
+        description="A list of entities in the knowledge graph."
+    )
+    relationships: list[Relationship] = Field(
+        default_factory=list,
+        description="A list of relationships between entities in the knowledge graph."
+    )
 
 class StoreResult(BaseModel):
     """The result of storing a graph."""
