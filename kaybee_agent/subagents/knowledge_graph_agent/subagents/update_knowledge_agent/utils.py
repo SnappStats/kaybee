@@ -1,5 +1,13 @@
+import re
 import string
 import secrets
+
+
+def remove_nonalphanumeric(text):
+    """Removes all characters from a string that are not alphanumeric."""
+    # The pattern '[^a-zA-Z0-9]' matches any character that is NOT a letter (a-z, A-Z) or a digit (0-9).
+    # re.sub() replaces all occurrences of the pattern with an empty string.
+    return re.sub(r'[^a-zA-Z0-9]', '', text)
 
 def generate_random_string(length=10):
     """

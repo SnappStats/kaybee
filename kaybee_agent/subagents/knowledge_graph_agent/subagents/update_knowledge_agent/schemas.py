@@ -24,6 +24,14 @@ class Entity(BaseModel):
         ...,
         description="The ID of the entity to update."
     )
+    updated_at: Optional[str] = Field(
+        default=None,
+        description="The timestamp when the entity was last updated."
+    )
+    updated_by: Optional[str] = Field(
+        default=None,
+        description="The user who last updated the entity."
+    )
     entity_names: list[str] = Field(
         ...,
         description="A list of names for the entity, with the first being the primary name."
@@ -43,7 +51,3 @@ class KnowledgeGraph(BaseModel):
         default_factory=list,
         description="A list of relationships between entities in the knowledge graph."
     )
-
-class StoreResult(BaseModel):
-    """The result of storing a graph."""
-    message: str

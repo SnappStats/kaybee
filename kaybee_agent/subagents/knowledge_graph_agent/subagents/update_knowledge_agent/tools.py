@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 import os
 from dotenv import load_dotenv
@@ -8,7 +9,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmResponse
 from google.cloud import storage
 
-from .utils import generate_random_string
+from .utils import generate_random_string, remove_nonalphanumeric
 
 load_dotenv()
 
@@ -39,7 +40,12 @@ def _store_knowledge_graph(knowledge_graph: dict, graph_id: str) -> None:
     )
 
 
-def _reformat_graph(graph: dict, frozen_entity_ids: set) -> dict:
+def _generate_entity_id(name: str) -> str:
+    return f"{remove_nonalphanumeric(name)[:4].lower()}.{generate_random_string(length=4)}"
+
+
+@flog
+def _reformat_graph(graph: dict, frozen_entity_ids: set, user_id: str) -> dict:
     '''
     Args:
         graph (dict): A knowledge graph as a dict, with graph['entities'] as a list.
@@ -47,16 +53,25 @@ def _reformat_graph(graph: dict, frozen_entity_ids: set) -> dict:
     Returns:
         dict: graph, but with new entity IDs, and with graph['entities'] now as a dict.'''
 
-    id_mapping = {}
-    for entity in graph['entities']:
-        if entity['entity_id'] in frozen_entity_ids:
-            id_mapping[entity['entity_id']] = entity['entity_id']
-        else:
-            new_id = f"{entity['entity_names'][0][:4].replace(' ','_').lower()}.{generate_random_string(length=4)}"
-            id_mapping[entity['entity_id']] = new_id
+    utcnow = dt.datetime.utcnow().isoformat(timespec='seconds')
+
+    id_mapping = {
+            entity['entity_id']: (
+                entity['entity_id']
+                if entity['entity_id'] in frozen_entity_ids
+                else _generate_entity_id(entity['entity_names'][0])
+            )
+            for entity in graph['entities']
+    }
 
     graph['entities'] = {
-            id_mapping[entity['entity_id']]: entity | {'entity_id': id_mapping[entity['entity_id']]}
+            id_mapping[entity['entity_id']]: (
+                entity | {
+                    'entity_id': id_mapping[entity['entity_id']],
+                    'updated_at': entity.get('updated_at') if entity['entity_id'] in frozen_entity_ids else utcnow,
+                    'updated_by': entity.get('updated_by') if entity['entity_id'] in frozen_entity_ids else user_id
+                }
+            )
             for entity in graph['entities']
     }
 
@@ -83,7 +98,9 @@ def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -
     frozen_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('frozen')}
     updated_knowledge_subgraph = json.loads(llm_response.content.parts[-1].text)
     updated_knowledge_subgraph = _reformat_graph(
-            graph=updated_knowledge_subgraph, frozen_entity_ids=frozen_entity_ids)
+            graph=updated_knowledge_subgraph,
+            frozen_entity_ids=frozen_entity_ids,
+            user_id=callback_context._invocation_context.user_id)
 
     _update_knowledge_graph(
             graph_id=callback_context._invocation_context.user_id,
