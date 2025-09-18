@@ -6,6 +6,7 @@ import google.auth
 from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, SseServerParams
 from google.adk.planners import BuiltInPlanner
 from google.genai import types
 from typing import Optional
@@ -41,6 +42,13 @@ root_agent = Agent(
         )
     ),
     instruction=PROMPT,
+    tools=[
+        MCPToolset(
+            connection_params=SseServerParams(
+                url="https://webpage-mcp-762632998010.us-central1.run.app/sse"
+            )
+        ),
+    ],
     sub_agents=[
         knowledge_graph_agent,
         flowchart_agent
