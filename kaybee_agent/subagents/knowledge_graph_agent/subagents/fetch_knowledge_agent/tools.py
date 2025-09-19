@@ -46,13 +46,14 @@ def _knowledge_graph_to_nx(g: dict) -> "nx.MultiDiGraph":
     return mdg
 
 
+@flog
 def _find_entity_ids_by_name(
-    entity_name: str, g: dict, threshold: int = 80
+    entity_name: str, all_entities: dict, threshold: int = 80
 ) -> list[str]:
     """Finds an entity by its name or one of its synonyms using fuzzy string matching."""
     return [
         entity_id
-        for entity_id, entity_data in g["entities"].items()
+        for entity_id, entity_data in all_entities.items()
         for name in entity_data["entity_names"]
         if fuzz.ratio(entity_name.lower(), name.lower()) > threshold
     ]
@@ -71,7 +72,7 @@ def get_relevant_neighborhood(entity_names: list[str], tool_context: ToolContext
     g = _fetch_knowledge_graph(graph_id=graph_id)
 
     relevant_entity_ids = set().union(*[
-        _find_entity_ids_by_name(entity_name, g)
+        _find_entity_ids_by_name(entity_name, g["entities"])
         for entity_name in entity_names
     ])
     mdg = _knowledge_graph_to_nx(g)

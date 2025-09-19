@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import logging
 import os
 from dotenv import load_dotenv
 from typing import Optional
@@ -31,8 +32,17 @@ def _fetch_knowledge_graph(graph_id: str) -> dict:
         content = blob.download_as_text()
         return json.loads(content)
 
+
+@flog
 def _store_knowledge_graph(knowledge_graph: dict, graph_id: str) -> None:
     """Stores the knowledge graph in the Google Cloud Storage bucket."""
+    entity_ids = set(knowledge_graph['entities'].keys())
+    terminals = set(rel['source_entity_id'] for rel in knowledge_graph['relationships']).union(
+        rel['target_entity_id'] for rel in knowledge_graph['relationships'])
+
+    if terminals - entity_ids:
+        logging.warning(f"Some relationships refer to non-existent entities: {terminals - entity_ids}")
+
     bucket = _get_bucket()
     blob = bucket.blob(f"{graph_id}.json")
     blob.upload_from_string(
@@ -96,16 +106,17 @@ def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -
 
     existing_knowledge_subgraph = callback_context.state['existing_knowledge']
     frozen_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('frozen')}
-    updated_knowledge_subgraph = json.loads(llm_response.content.parts[-1].text)
-    updated_knowledge_subgraph = _reformat_graph(
-            graph=updated_knowledge_subgraph,
-            frozen_entity_ids=frozen_entity_ids,
-            user_id=callback_context._invocation_context.user_id)
+    if response_text := llm_response.content.parts[-1].text:
+        updated_knowledge_subgraph = json.loads(response_text)
+        updated_knowledge_subgraph = _reformat_graph(
+                graph=updated_knowledge_subgraph,
+                frozen_entity_ids=frozen_entity_ids,
+                user_id=callback_context._invocation_context.user_id)
 
-    _update_knowledge_graph(
-            graph_id=callback_context._invocation_context.user_id,
-            old_subgraph=existing_knowledge_subgraph,
-            new_subgraph=updated_knowledge_subgraph)
+        _update_knowledge_graph(
+                graph_id=callback_context._invocation_context.user_id,
+                old_subgraph=existing_knowledge_subgraph,
+                new_subgraph=updated_knowledge_subgraph)
 
 @flog
 def _update_knowledge_graph(
