@@ -13,6 +13,7 @@ from typing import Optional
 
 from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
 from .subagents.flowchart_agent import agent as flowchart_agent
+from .tools import expand_query
 
 def setup_environment():
     # Load environment variables from .env file in root directory
@@ -29,8 +30,15 @@ def setup_environment():
         # The tests will set the required environment variables.
         pass
 
-
 PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.'''
+
+def process_user_input(
+        callback_context: CallbackContext) -> Optional[types.Content]:
+    if text := callback_context.user_content.parts[-1].text:
+        graph_id = callback_context._invocation_context.user_id
+        if kb_context := expand_query(query=text, graph_id=graph_id):
+            callback_context.user_content.parts.append(kb_context)
+
 
 root_agent = Agent(
     name="knowledge_base_agent",
@@ -53,4 +61,5 @@ root_agent = Agent(
         knowledge_graph_agent,
         flowchart_agent
     ],
+    before_agent_callback=process_user_input,
 )

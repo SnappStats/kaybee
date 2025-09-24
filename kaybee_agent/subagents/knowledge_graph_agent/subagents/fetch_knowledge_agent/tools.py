@@ -12,6 +12,78 @@ from floggit import flog
 
 load_dotenv()
 
+@flog
+def get_relevant_neighborhood(entity_names: list[str], tool_context: ToolContext) -> dict:
+    """
+    Args:
+        entity_names (list[str]): A list of entity names, and any synonyms, that might be found in the existing knowledge graph.
+
+    Returns:
+        dict: A relevant subgraph of the knowledge graph, including a surrounding neighborhood of the relevant entities (to help patching in a replacement subgraph).
+    """
+    graph_id = tool_context._invocation_context.user_id
+    g = _fetch_knowledge_graph(graph_id=graph_id)
+
+    relevant_entity_ids = _get_relevant_entities_for_phrases(
+            phrases=entity_names, entities=g['entities'])
+    neighborhood = _get_knowledge_subgraph(
+            entity_ids=relevant_entity_ids, graph=g, num_hops=2)
+
+    tool_context.state['existing_knowledge'] = neighborhood
+    
+    return neighborhood
+
+
+@flog
+def get_relevant_neighborhood_for_query(query: str, graph_id: str) -> dict:
+    """
+    Args:
+        query (str): A user query that might be relevanet to some entities in the knowledge graph.
+        graph_id (str): The ID of the knowledge graph to query.
+
+    Returns:
+        dict: A relevant subgraph of the knowledge graph, including a surrounding neighborhood of the relevant entities (to help patching in a replacement subgraph).
+    """
+    g = _fetch_knowledge_graph(graph_id=graph_id)
+
+    relevant_entity_ids = _get_relevant_entities_in_query(
+            query=query, entities=g['entities'])
+    neighborhood = _get_knowledge_subgraph(
+            entity_ids=relevant_entity_ids, graph=g, num_hops=1)
+
+    return neighborhood
+
+
+@flog
+def _get_relevant_entities_for_phrases(phrases: list[str], entities: dict) -> set[str]:
+    '''Returns a set of entity IDs from the knowledge graph that match the given phrases.'''
+
+    relevant_entity_ids = set()
+
+    for phrase in phrases:
+        for entity_id, entity_data in entities.items():
+            for entity_name in entity_data['entity_names']:
+                if fuzz.ratio(phrase.lower(), entity_name.lower()) > 80:
+                    relevant_entity_ids.add(entity_id)
+                    break
+
+    return relevant_entity_ids
+
+
+@flog
+def _get_relevant_entities_in_query(query: str, entities: dict) -> set[str]:
+    '''Returns a set of entity IDs from the knowledge graph found in the given query.'''
+    relevant_entity_ids = set()
+
+    for entity_id, entity_data in entities.items():
+        for entity_name in entity_data['entity_names']:
+            if entity_name.lower() in query.lower():
+                relevant_entity_ids.add(entity_id)
+                break
+
+    return relevant_entity_ids
+
+
 def _get_bucket():
     storage_client = storage.Client()
     bucket_name = os.environ.get("KNOWLEDGE_GRAPH_BUCKET")
@@ -47,73 +119,53 @@ def _knowledge_graph_to_nx(g: dict) -> "nx.MultiDiGraph":
 
 
 @flog
-def _find_entity_ids_by_name(
-    entity_name: str, all_entities: dict, threshold: int = 80
-) -> list[str]:
-    """Finds an entity by its name or one of its synonyms using fuzzy string matching."""
-    return [
-        entity_id
-        for entity_id, entity_data in all_entities.items()
-        for name in entity_data["entity_names"]
-        if fuzz.ratio(entity_name.lower(), name.lower()) > threshold
-    ]
+def _get_knowledge_subgraph(entity_ids: list[str], graph: dict, num_hops: Optional[int] = 2) -> dict:
+    """Extracts a subgraph from the knowledge graph centered around the given entity IDs."""
 
-
-@flog
-def get_relevant_neighborhood(entity_names: list[str], tool_context: ToolContext) -> dict:
-    """
-    Args:
-        entity_names (list[str]): A list of entity names, and any synonyms, that might be nodes in the existing knowledge graph.
-
-    Returns:
-        dict: A relevant subgraph of the knowledge graph, including a surrounding neighborhood of the relevant entities (to help patching in a replacement subgraph).
-    """
-    graph_id = tool_context._invocation_context.user_id
-    g = _fetch_knowledge_graph(graph_id=graph_id)
-
-    relevant_entity_ids = set().union(*[
-        _find_entity_ids_by_name(entity_name, g["entities"])
-        for entity_name in entity_names
-    ])
-    mdg = _knowledge_graph_to_nx(g)
+    mdg = _knowledge_graph_to_nx(graph)
 
     # Relevant entities' 1-hop neighbors.
     nbrs1 = {
-            nbr for entity_id in relevant_entity_ids
+            nbr for entity_id in entity_ids
             for nbr in mdg.to_undirected().neighbors(entity_id)
-            if nbr not in relevant_entity_ids
-    }
-    # Relevant entities' 2-hop neighbors.
-    nbrs2 = {
-            nbr for entity_id in nbrs1
-            for nbr in mdg.to_undirected().neighbors(entity_id)
-            if nbr not in relevant_entity_ids and nbr not in nbrs1
+            if nbr not in entity_ids
     }
 
-    # 2-hop neighbors connected to at least one external entity
+    if num_hops > 1:
+        # Relevant entities' 2-hop neighbors.
+        nbrs2 = {
+                nbr for entity_id in nbrs1
+                for nbr in mdg.to_undirected().neighbors(entity_id)
+                if nbr not in entity_ids and nbr not in nbrs1
+        }
+
+        outer_nbrs = nbrs2
+    else:
+        nbrs2 = set()
+        outer_nbrs = nbrs1
+
+    # outer neighbors connected to at least one external entity
     valence_entities = {
-            entity_id for entity_id in nbrs2
-            if set(mdg.to_undirected().neighbors(entity_id)) - relevant_entity_ids - nbrs1 - nbrs2
+            entity_id for entity_id in outer_nbrs 
+            if set(mdg.to_undirected().neighbors(entity_id)) - entity_ids - nbrs1 - nbrs2
     }
 
-    neighborhood = mdg.subgraph(relevant_entity_ids|nbrs1|nbrs2)
-    neighborhood_json = nx.node_link_data(neighborhood, edges="links")
+    subgraph = mdg.subgraph(entity_ids|nbrs1|nbrs2)
+    subgraph_json = nx.node_link_data(subgraph, edges="links")
 
     # Reformat
-    neighborhood = {
+    subgraph = {
         'entities': {
             node['entity_id']: dict(**node, frozen=(node['entity_id'] in valence_entities))
-            for node in neighborhood_json['nodes']
+            for node in subgraph_json['nodes']
         },
         'relationships': [
             {
                 'source_entity_id': link['source'],
                 'target_entity_id': link['target'],
                 'relationship': link['relationship']
-            } for link in neighborhood_json['links']
+            } for link in subgraph_json['links']
         ]
     }
 
-    tool_context.state['existing_knowledge'] = neighborhood
-
-    return neighborhood
+    return subgraph
