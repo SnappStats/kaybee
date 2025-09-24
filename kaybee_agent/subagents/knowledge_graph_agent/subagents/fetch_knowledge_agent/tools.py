@@ -119,7 +119,7 @@ def _knowledge_graph_to_nx(g: dict) -> "nx.MultiDiGraph":
 
 
 @flog
-def _get_knowledge_subgraph(entity_ids: list[str], graph: dict, num_hops: Optional[int] = 2) -> dict:
+def _get_knowledge_subgraph(entity_ids: set[str], graph: dict, num_hops: Optional[int] = 2) -> dict:
     """Extracts a subgraph from the knowledge graph centered around the given entity IDs."""
 
     mdg = _knowledge_graph_to_nx(graph)
