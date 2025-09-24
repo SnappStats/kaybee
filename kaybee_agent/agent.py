@@ -46,7 +46,7 @@ root_agent = Agent(
     planner=BuiltInPlanner(
         thinking_config=types.ThinkingConfig(
             include_thoughts=True,
-            thinking_budget=1024,
+            thinking_budget=128,
         )
     ),
     instruction=PROMPT,
