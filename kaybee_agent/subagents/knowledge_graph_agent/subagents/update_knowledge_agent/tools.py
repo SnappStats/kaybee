@@ -95,6 +95,24 @@ def _reformat_graph(graph: dict, frozen_entity_ids: set, user_id: str) -> dict:
 
     return graph
 
+class InvalidUpdatedKnowledgeSubgraphError(Exception):
+        """Custom exception for invalid knowledge subgraph."""
+        def __init__(
+                self,
+                message: str,
+                frozen_entity_ids: set = None,
+                updated_knowledge_subgraph: dict = None):
+            super().__init__(message)
+            self.frozen_entity_ids = frozen_entity_ids
+            self.updated_knowledge_subgraph = updated_knowledge_subgraph
+
+        def __str__(self):
+            base_message = super().__str__()
+            base_message += f" Frozen entity IDs: {self.frozen_entity_ids}."
+            base_message += f" Updated knowledge subgraph: {self.updated_knowledge_subgraph}."
+
+            return base_message
+
 
 def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
     """
@@ -108,6 +126,27 @@ def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -
     frozen_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('frozen')}
     if response_text := llm_response.content.parts[-1].text:
         updated_knowledge_subgraph = json.loads(response_text)
+
+        # Ensure frozen entities retain their IDs
+        if not frozen_entity_ids.issubset(
+                {e['entity_id'] for e in updated_knowledge_subgraph['entities']}
+        ):
+            logging.error(
+                    f"Updated subgraph missing frozen entity IDs.",
+                    extra={
+                        'json_fields': {
+                            'existing_knowledge_subgraph': existing_knowledge_subgraph,
+                            'updated_knowledge_subgraph': updated_knowledge_subgraph,
+                            'frozen_entity_ids': list(frozen_entity_ids)
+                        }
+                    }
+            )
+            raise InvalidUpdatedKnowledgeSubgraphError(
+                    message="Updated subgraph missing frozen entity IDs.",
+                    frozen_entity_ids=frozen_entity_ids,
+                    updated_knowledge_subgraph=updated_knowledge_subgraph
+            )
+
         updated_knowledge_subgraph = _reformat_graph(
                 graph=updated_knowledge_subgraph,
                 frozen_entity_ids=frozen_entity_ids,
