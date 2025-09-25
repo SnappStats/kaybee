@@ -25,7 +25,7 @@ The replacement subgraph must:
 -   **Include all original "frozen" entities**, since they connect to other parts of the graph that are not being updated.
 -   **(Faithfully) simplify graph topology** where possible, such as combining nodes that represent the same entity, or removing redundant relationships.
 
-If there is no new or updated knowledge, the replacement subgraph will resemble the original subgraph. If the updated knowledge eradicates the original knowledge, the replacement subgraph should be empty.
+If there is no new or updated knowledge, the replacement subgraph should of course resemble the original subgraph. If the updated knowledge eradicates the original knowledge, the replacement subgraph should be empty.
 
 You must output the updated subgraph as a `KnowledgeGraph` object.
 """
