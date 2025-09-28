@@ -156,7 +156,7 @@ def _get_knowledge_subgraph(entity_ids: set[str], graph: dict, num_hops: Optiona
     # Reformat
     subgraph = {
         'entities': {
-            node['entity_id']: dict(**node, frozen=(node['entity_id'] in valence_entities))
+            node['entity_id']: dict(**node, has_external_neighbor=(node['entity_id'] in valence_entities))
             for node in subgraph_json['nodes']
         },
         'relationships': [

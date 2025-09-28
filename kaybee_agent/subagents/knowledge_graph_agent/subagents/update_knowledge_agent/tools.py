@@ -55,7 +55,7 @@ def _generate_entity_id(name: str) -> str:
 
 
 @flog
-def _reformat_graph(graph: dict, frozen_entity_ids: set, user_id: str) -> dict:
+def _reformat_graph(graph: dict, valence_entity_ids: set, user_id: str) -> dict:
     '''
     Args:
         graph (dict): A knowledge graph as a dict, with graph['entities'] as a list.
@@ -68,7 +68,7 @@ def _reformat_graph(graph: dict, frozen_entity_ids: set, user_id: str) -> dict:
     id_mapping = {
             entity['entity_id']: (
                 entity['entity_id']
-                if entity['entity_id'] in frozen_entity_ids
+                if entity['entity_id'] in valence_entity_ids
                 else _generate_entity_id(entity['entity_names'][0])
             )
             for entity in graph['entities']
@@ -78,8 +78,8 @@ def _reformat_graph(graph: dict, frozen_entity_ids: set, user_id: str) -> dict:
             id_mapping[entity['entity_id']]: (
                 entity | {
                     'entity_id': id_mapping[entity['entity_id']],
-                    'updated_at': entity.get('updated_at') if entity['entity_id'] in frozen_entity_ids else utcnow,
-                    'updated_by': entity.get('updated_by') if entity['entity_id'] in frozen_entity_ids else user_id
+                    'updated_at': entity.get('updated_at') if entity['entity_id'] in valence_entity_ids else utcnow,
+                    'updated_by': entity.get('updated_by') if entity['entity_id'] in valence_entity_ids else user_id
                 }
             )
             for entity in graph['entities']
@@ -100,15 +100,15 @@ class InvalidUpdatedKnowledgeSubgraphError(Exception):
         def __init__(
                 self,
                 message: str,
-                frozen_entity_ids: set = None,
+                valence_entity_ids: set = None,
                 updated_knowledge_subgraph: dict = None):
             super().__init__(message)
-            self.frozen_entity_ids = frozen_entity_ids
+            self.valence_entity_ids = valence_entity_ids
             self.updated_knowledge_subgraph = updated_knowledge_subgraph
 
         def __str__(self):
             base_message = super().__str__()
-            base_message += f" Frozen entity IDs: {self.frozen_entity_ids}."
+            base_message += f" Frozen entity IDs: {self.valence_entity_ids}."
             base_message += f" Updated knowledge subgraph: {self.updated_knowledge_subgraph}."
 
             return base_message
@@ -123,33 +123,33 @@ def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -
         return
 
     existing_knowledge_subgraph = callback_context.state['existing_knowledge']
-    frozen_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('frozen')}
+    valencd_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('has_external_neighbors')}
     if response_text := llm_response.content.parts[-1].text:
         updated_knowledge_subgraph = json.loads(response_text)
 
-        # Ensure frozen entities retain their IDs
-        if not frozen_entity_ids.issubset(
+        # Ensure valence entities retain their IDs
+        if not valence_entity_ids.issubset(
                 {e['entity_id'] for e in updated_knowledge_subgraph['entities']}
         ):
             logging.error(
-                    f"Updated subgraph missing frozen entity IDs.",
+                    f"Updated subgraph missing valence entity IDs.",
                     extra={
                         'json_fields': {
                             'existing_knowledge_subgraph': existing_knowledge_subgraph,
                             'updated_knowledge_subgraph': updated_knowledge_subgraph,
-                            'frozen_entity_ids': list(frozen_entity_ids)
+                            'valence_entity_ids': list(valence_entity_ids)
                         }
                     }
             )
             raise InvalidUpdatedKnowledgeSubgraphError(
-                    message="Updated subgraph missing frozen entity IDs.",
-                    frozen_entity_ids=frozen_entity_ids,
+                    message="Updated subgraph missing valence entity IDs.",
+                    valence_entity_ids=valence_entity_ids,
                     updated_knowledge_subgraph=updated_knowledge_subgraph
             )
 
         updated_knowledge_subgraph = _reformat_graph(
                 graph=updated_knowledge_subgraph,
-                frozen_entity_ids=frozen_entity_ids,
+                valence_entity_ids=valence_entity_ids,
                 user_id=callback_context._invocation_context.user_id)
 
         _update_knowledge_graph(
