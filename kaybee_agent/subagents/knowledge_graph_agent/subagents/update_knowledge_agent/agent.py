@@ -30,6 +30,12 @@ If there is no new or updated knowledge, the replacement subgraph should of cour
 You must output the updated subgraph as a `KnowledgeGraph` object.
 """
 
+def prepare_state(callback_context: CallbackContext):
+    if not callback_context.state.get('existing_knowledge'):
+        callback_context.state['existing_knowledge'] = {
+            'entities': {}, 'relationships': []
+        }
+
 agent = Agent(
     name="merge_knowledge_agent",
     model="gemini-2.5-flash",
@@ -44,5 +50,6 @@ agent = Agent(
     instruction=PROMPT,
     output_schema=KnowledgeGraph,
     output_key='updated_knowledge',
+    before_agent_callback=prepare_state,
     after_model_callback=update_graph
 )
