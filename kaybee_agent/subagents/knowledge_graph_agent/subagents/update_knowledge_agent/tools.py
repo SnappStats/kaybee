@@ -123,7 +123,9 @@ def update_graph(callback_context: CallbackContext, llm_response: LlmResponse) -
         return
 
     existing_knowledge_subgraph = callback_context.state['existing_knowledge']
-    valencd_entity_ids = {k for k, v in existing_knowledge_subgraph['entities'].items() if v.get('has_external_neighbors')}
+    valence_entity_ids = {
+            k for k, v in existing_knowledge_subgraph['entities'].items()
+            if v.get('has_external_neighbor')}
     if response_text := llm_response.content.parts[-1].text:
         updated_knowledge_subgraph = json.loads(response_text)
 
