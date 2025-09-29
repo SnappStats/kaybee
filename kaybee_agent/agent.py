@@ -6,6 +6,8 @@ import google.auth
 from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
+from google.adk.tools.agent_tool import AgentTool
+from google.adk.tools import google_search
 from google.adk.tools.mcp_tool.mcp_toolset import (
         MCPToolset, StreamableHTTPConnectionParams)
 from google.adk.planners import BuiltInPlanner
@@ -40,6 +42,12 @@ def process_user_input(
         if kb_context := expand_query(query=text, graph_id=graph_id):
             callback_context.user_content.parts.append(kb_context)
 
+search_agent = Agent(
+    model='gemini-2.5-flash',
+    name='search_agent',
+    instruction="""You're a specialist in Google Search""",
+    tools=[google_search],
+)
 
 root_agent = Agent(
     name="knowledge_base_agent",
@@ -57,6 +65,7 @@ root_agent = Agent(
                 url="https://webpage-mcp-762632998010.us-central1.run.app/mcp"
             )
         ),
+        AgentTool(agent=search_agent),
     ],
     sub_agents=[
         knowledge_graph_agent,
