@@ -13,7 +13,7 @@ def expand_query(query: str, graph_id: str) -> Optional[types.Part]:
     for entity in nbhd['entities'].values():
         entity_name = entity['entity_names'][0]
         entity_str = ''
-        if entity['properties']:
+        if entity.get('properties'):
             entity_str += f"{entity_name} has properties: {str(entity['properties'])}. "
         if len(entity['entity_names']) > 1:
             entity_str += f"{entity_name} is also known as: {', '.join(entity['entity_names'][1:])}"
