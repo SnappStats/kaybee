@@ -16,6 +16,7 @@ from typing import Optional
 
 from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
 from .subagents.flowchart_agent import agent as flowchart_agent
+from .asdf import main as update_knowledge_graph
 from .tools import expand_query
 
 def setup_environment():
@@ -66,9 +67,9 @@ root_agent = Agent(
             )
         ),
         AgentTool(agent=search_agent),
+        update_knowledge_graph
     ],
     sub_agents=[
-        knowledge_graph_agent,
         flowchart_agent
     ],
     before_agent_callback=process_user_input,
