@@ -36,8 +36,8 @@ class Entity(BaseModel):
         ...,
         description="A list of names for the entity, with the first being the primary name."
     )
-    properties: Optional[dict[str, Any]] = Field(
-        default_factory=dict,
+    properties: dict[str, Any] = Field(
+        default={},
         description="A dictionary of properties for the entity."
     )
 
