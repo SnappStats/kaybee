@@ -28,6 +28,10 @@ def expand_query(query: str, graph_id: str) -> Optional[types.Part]:
         relationships_str += f"{source_name} {rel['relationship']} {target_name}\n"
 
     if relevant_entities_str or relationships_str:
-        return types.Part(
-            text=f"(FYI, according to the Knowledge Graph: {relevant_entities_str}\n{relationships_str}.)"
-        )
+        relevant_subgraph_str = f"(FYI, according to the Knowledge Graph: {relevant_entities_str}\n{relationships_str}.)"
+    else:
+        relevant_subgraph_str = ''
+
+    expanded_query = f'{relevant_subgraph_str}\ngraph_id={graph_id}'
+
+    return types.Part(text=expanded_query)
