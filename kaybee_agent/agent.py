@@ -16,7 +16,7 @@ from typing import Optional
 
 from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
 from .subagents.flowchart_agent import agent as flowchart_agent
-from .asdf import main as update_knowledge_graph
+from .asdf import main as record_knowledge
 from .tools import expand_query
 
 def setup_environment():
@@ -34,7 +34,8 @@ def setup_environment():
         # The tests will set the required environment variables.
         pass
 
-PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.'''
+PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.
+Whenever new or updated facts are encountered (whether coming from the user or the internet), record them with the `record_knowledge` tool.'''
 
 def process_user_input(
         callback_context: CallbackContext) -> Optional[types.Content]:
@@ -46,6 +47,7 @@ def process_user_input(
 search_agent = Agent(
     model='gemini-2.5-flash',
     name='search_agent',
+    description='Retrieves information from the internet.',
     instruction="""You're a specialist in Google Search""",
     tools=[google_search],
 )
@@ -63,11 +65,10 @@ root_agent = Agent(
     tools=[
         MCPToolset(
             connection_params=StreamableHTTPConnectionParams(
-                url="https://webpage-mcp-762632998010.us-central1.run.app/mcp"
+                url=os.environ['MCP_SERVER']
             )
         ),
         AgentTool(agent=search_agent),
-        update_knowledge_graph
     ],
     sub_agents=[
         flowchart_agent
