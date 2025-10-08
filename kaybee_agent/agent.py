@@ -14,7 +14,7 @@ from google.adk.planners import BuiltInPlanner
 from google.genai import types
 from typing import Optional
 
-from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
+#from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
 from .subagents.flowchart_agent import agent as flowchart_agent
 from .asdf import main as record_knowledge
 from .tools import expand_query
