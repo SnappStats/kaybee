@@ -65,7 +65,7 @@ root_agent = Agent(
     tools=[
         MCPToolset(
             connection_params=StreamableHTTPConnectionParams(
-                url=os.environ['MCP_SERVER']
+                url=os.environ['KG_MCP_SERVER']
             )
         ),
         AgentTool(agent=search_agent),
