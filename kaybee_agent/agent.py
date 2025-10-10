@@ -33,7 +33,7 @@ def setup_environment():
         pass
 
 PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.
-Record any new or updated facts that are encountered, whether from the user or the internet.'''
+Record (or "curate") any new or updated facts that are encountered, whether from the user or the internet.'''
 
 def process_user_input(
         callback_context: CallbackContext) -> Optional[types.Content]:
