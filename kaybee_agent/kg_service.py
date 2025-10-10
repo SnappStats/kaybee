@@ -5,37 +5,13 @@ import networkx as nx
 from dotenv import load_dotenv
 from typing import Optional
 
-from google.adk.tools import ToolContext
 from google.cloud import storage
-from thefuzz import fuzz
 from floggit import flog
 
 load_dotenv()
 
 @flog
-def get_relevant_neighborhood(entity_names: list[str], tool_context: ToolContext) -> dict:
-    """
-    Args:
-        entity_names (list[str]): A list of entity names, and any synonyms, that might be found in the existing knowledge graph.
-
-    Returns:
-        dict: A relevant subgraph of the knowledge graph, including a surrounding neighborhood of the relevant entities (to help patching in a replacement subgraph).
-    """
-    graph_id = tool_context._invocation_context.user_id
-    g = _fetch_knowledge_graph(graph_id=graph_id)
-
-    relevant_entity_ids = _get_relevant_entities_for_phrases(
-            phrases=entity_names, entities=g['entities'])
-    neighborhood = _get_knowledge_subgraph(
-            entity_ids=relevant_entity_ids, graph=g, num_hops=2)
-
-    tool_context.state['existing_knowledge'] = neighborhood
-    
-    return neighborhood
-
-
-@flog
-def get_relevant_neighborhood_for_query(query: str, graph_id: str) -> dict:
+def get_relevant_neighborhood(query: str, graph_id: str) -> dict:
     """
     Args:
         query (str): A user query that might be relevanet to some entities in the knowledge graph.
@@ -46,7 +22,7 @@ def get_relevant_neighborhood_for_query(query: str, graph_id: str) -> dict:
     """
     g = _fetch_knowledge_graph(graph_id=graph_id)
 
-    relevant_entity_ids = _get_relevant_entities_in_query(
+    relevant_entity_ids = _get_relevant_entities(
             query=query, entities=g['entities'])
     neighborhood = _get_knowledge_subgraph(
             entity_ids=relevant_entity_ids, graph=g, num_hops=1)
@@ -55,23 +31,7 @@ def get_relevant_neighborhood_for_query(query: str, graph_id: str) -> dict:
 
 
 @flog
-def _get_relevant_entities_for_phrases(phrases: list[str], entities: dict) -> set[str]:
-    '''Returns a set of entity IDs from the knowledge graph that match the given phrases.'''
-
-    relevant_entity_ids = set()
-
-    for phrase in phrases:
-        for entity_id, entity_data in entities.items():
-            for entity_name in entity_data['entity_names']:
-                if fuzz.ratio(phrase.lower(), entity_name.lower()) > 80:
-                    relevant_entity_ids.add(entity_id)
-                    break
-
-    return relevant_entity_ids
-
-
-@flog
-def _get_relevant_entities_in_query(query: str, entities: dict) -> set[str]:
+def _get_relevant_entities(query: str, entities: dict) -> set[str]:
     '''Returns a set of entity IDs from the knowledge graph found in the given query.'''
     relevant_entity_ids = set()
 
@@ -87,8 +47,6 @@ def _get_relevant_entities_in_query(query: str, entities: dict) -> set[str]:
 def _get_bucket():
     storage_client = storage.Client()
     bucket_name = os.environ.get("KNOWLEDGE_GRAPH_BUCKET")
-    if not bucket_name:
-        raise ValueError("KNOWLEDGE_GRAPH_BUCKET environment variable not set.")
     return storage_client.get_bucket(bucket_name)
 
 

@@ -14,9 +14,7 @@ from google.adk.planners import BuiltInPlanner
 from google.genai import types
 from typing import Optional
 
-#from .subagents.knowledge_graph_agent import agent as knowledge_graph_agent
 from .subagents.flowchart_agent import agent as flowchart_agent
-from .asdf import main as record_knowledge
 from .tools import expand_query
 
 def setup_environment():
@@ -35,7 +33,7 @@ def setup_environment():
         pass
 
 PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.
-Whenever new or updated facts are encountered (whether coming from the user or the internet), record them with the `record_knowledge` tool.'''
+Record any new or updated facts that are encountered, whether from the user or the internet.'''
 
 def process_user_input(
         callback_context: CallbackContext) -> Optional[types.Content]:
@@ -71,7 +69,7 @@ root_agent = Agent(
         AgentTool(agent=search_agent),
     ],
     sub_agents=[
-        flowchart_agent
+        #flowchart_agent
     ],
     before_agent_callback=process_user_input,
 )

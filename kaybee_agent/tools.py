@@ -1,13 +1,13 @@
 from typing import Optional
 from floggit import flog
 from google.genai import types
-from .subagents.knowledge_graph_agent.subagents.fetch_knowledge_agent.tools import get_relevant_neighborhood_for_query
+from .kg_service import get_relevant_neighborhood
 
 
 @flog
 def expand_query(query: str, graph_id: str) -> Optional[types.Part]:
     """Expands a query by fetching related entities from the knowledge graph and appending them to the query."""
-    nbhd = get_relevant_neighborhood_for_query(query=query, graph_id=graph_id)
+    nbhd = get_relevant_neighborhood(query=query, graph_id=graph_id)
 
     relevant_entities_str = ""
     for entity in nbhd['entities'].values():
