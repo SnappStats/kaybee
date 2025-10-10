@@ -9,7 +9,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.tools.agent_tool import AgentTool
 from google.adk.tools import google_search
 from google.adk.tools.mcp_tool.mcp_toolset import (
-        MCPToolset, StreamableHTTPConnectionParams)
+        McpToolset, StreamableHTTPConnectionParams)
 from google.adk.planners import BuiltInPlanner
 from google.genai import types
 from typing import Optional
@@ -61,7 +61,7 @@ root_agent = Agent(
     ),
     instruction=PROMPT,
     tools=[
-        MCPToolset(
+        McpToolset(
             connection_params=StreamableHTTPConnectionParams(
                 url=os.environ['KG_MCP_SERVER']
             )
