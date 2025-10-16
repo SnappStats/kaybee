@@ -9,11 +9,8 @@ dependencies = [
     "google-cloud-storage>=2.19.0",
     "locust==2.37.10",
     "networkx>=3.5",
-    "pg8000==1.31.2",
     "pydantic>=2.11.7",
     "python-dotenv==1.1.0",
-    "thefuzz==0.22.1",
-    "python-Levenshtein==0.25.1",
     "floggit>=0.0.19",
 ]
 
