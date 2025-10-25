@@ -38,7 +38,7 @@ Record (or "curate") any new or updated facts that are encountered, whether from
 def process_user_input(
         callback_context: CallbackContext) -> Optional[types.Content]:
     if text := callback_context.user_content.parts[-1].text:
-        graph_id = callback_context._invocation_context.user_id
+        graph_id = callback_context._invocation_context.state.graph_id
         if kb_context := expand_query(query=text, graph_id=graph_id):
             callback_context.user_content.parts.append(kb_context)
 
