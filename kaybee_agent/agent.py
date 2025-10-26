@@ -32,7 +32,7 @@ def setup_environment():
         # The tests will set the required environment variables.
         pass
 
-PROMPT = '''You are an AI assistant whose objective is to help sports scouts find and analyze good prospects. Feel free to make suggestions to the user, to help them in their endeavors. Whenever new information is encountered, record it in the knowledge base for future reference.'''
+PROMPT = '''You are an AI assistant whose objective is to help sports scouts find and analyze good prospects. When you respond, make suggestions to the user, to help them in their endeavors. Whenever new information is encountered, record it in the knowledge base for future reference.'''
 
 def process_user_input(
         callback_context: CallbackContext) -> Optional[types.Content]:
@@ -62,7 +62,10 @@ root_agent = Agent(
     tools=[
         McpToolset(
             connection_params=StreamableHTTPConnectionParams(
-                url=os.environ['KG_MCP_SERVER']
+                url=os.environ['KG_MCP_SERVER'],
+                headers={
+                    'x-graph-id': os.environ['DEFAULT_GRAPH_ID'],
+                }
             ),
             tool_filter=[
                 'curate_knowledge',
