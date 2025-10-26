@@ -32,21 +32,20 @@ def setup_environment():
         # The tests will set the required environment variables.
         pass
 
-PROMPT = '''You are an AI assistant whose objective is to help Subject Matter Experts (SMEs) organize knowledge and create flowcharts.
-Record (or "curate") any new or updated facts that are encountered, whether from the user or the internet.'''
+PROMPT = '''You are an AI assistant whose objective is to help sports scouts find and analyze good prospects. Feel free to make suggestions to the user, to help them in their endeavors. Whenever new information is encountered, record it in the knowledge base for future reference.'''
 
 def process_user_input(
         callback_context: CallbackContext) -> Optional[types.Content]:
     if text := callback_context.user_content.parts[-1].text:
-        graph_id = callback_context._invocation_context.state.graph_id
+        graph_id = callback_context.state['graph_id']
         if kb_context := expand_query(query=text, graph_id=graph_id):
             callback_context.user_content.parts.append(kb_context)
 
-search_agent = Agent(
+internet_search_agent = Agent(
     model='gemini-2.5-flash',
-    name='search_agent',
+    name='internet_search_agent',
     description='Retrieves information from the internet.',
-    instruction="""You're a specialist in Google Search""",
+    instruction="""You're a specialist in searching the internet.""",
     tools=[google_search],
 )
 
@@ -64,9 +63,13 @@ root_agent = Agent(
         McpToolset(
             connection_params=StreamableHTTPConnectionParams(
                 url=os.environ['KG_MCP_SERVER']
-            )
+            ),
+            tool_filter=[
+                'curate_knowledge',
+                'search_knowledge_graph'
+            ],
         ),
-        AgentTool(agent=search_agent),
+        AgentTool(agent=internet_search_agent),
     ],
     sub_agents=[
         #flowchart_agent
